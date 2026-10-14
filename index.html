@@ -62,8 +62,6 @@ h1{font-size:18px;margin:0 0 2px}h2{font-size:14px;margin:0 0 8px;color:var(--mu
 <label>🔊 Звуки<input type="checkbox" id="so"></label>
 <label>Громкость звуков<input type="range" id="sv" min="0" max="100"></label>
 <div class="mut" style="margin-top:16px">ℹ️ Если ты вошёл в аккаунт, владелец игры видит твой прогресс (уровень, кристаллы, генераторы) и может его изменить.</div>
-<h2 style="margin-top:16px">Код администратора</h2>
-<div class="row"><input type="text" id="ai" placeholder="Введите код" autocomplete="off" style="flex:1"><button class="btn" id="ac">Применить</button></div>
 <div id="ap" style="display:none;margin-top:12px"><h2>🛠 Админ-панель</h2><div class="row">
 <button class="btn" data-a="k">+1 тыс</button><button class="btn" data-a="m">+1 млн</button><button class="btn" data-a="b">+1 млрд</button><button class="btn" data-a="x">×10 кристаллов</button>
 <button class="btn" data-a="l">Уровень +1</button><button class="btn" data-a="L">Уровень +10</button><button class="btn" data-a="u">Все улучшения</button><button class="btn" data-a="g">Золотой кристалл</button><button class="btn" data-a="s">+100 💠</button></div>
@@ -185,10 +183,7 @@ $("sv").addEventListener("change",()=>sfx("buy"));
 $("st").onclick=()=>{MD.style.display="flex";syncUI()};
 $("cl").onclick=()=>MD.style.display="none";
 MD.onclick=e=>{if(e.target==MD)MD.style.display="none"};
-const CODE="crystal777";
-$("ac").onclick=()=>{if($("ai").value.trim()==CODE){$("ap").style.display="block";$("ai").value="";toast("🔑 Права администратора получены")}else toast("Неверный код")};
-$("ai").onkeydown=e=>{if(e.key=="Enter")$("ac").click()};
-$("ap").onclick=e=>{const a=e.target.dataset.a;if(!a)return;
+$("ap").onclick=e=>{const a=e.target.dataset.a;if(!a||!window.IS_ADM)return;
 if(a=="k")add(1e3);else if(a=="m")add(1e6);else if(a=="b")add(1e9);else if(a=="x")add(S.c*9);
 else if(a=="l"){if(S.lvl<999){S.t=Math.max(S.t,GOALS[S.lvl-1]);add(0)}}
 else if(a=="L"){for(let i=0;i<10&&S.lvl<999;i++){S.t=Math.max(S.t,GOALS[S.lvl-1]);add(0)}}
@@ -279,7 +274,7 @@ S.uid=UID;fix();render();$("au_open").style.display="none";$("au_out").style.dis
 if(row&&row.nick){S.nick=row.nick;toast("👋 С возвращением, "+String(S.nick).replace(/[<>&"]/g,"")+"!")}
 else{const n=u.user_metadata&&u.user_metadata.nick;if(n&&NICK.test(n))await setNick(n);else{auMode("nick");$("au_m").style.display="flex"}}
 lastJ="";save();pollE();
-try{const a=await sb.from("admins").select("id").eq("id",UID).maybeSingle();if(a.data){$("badm").style.display="";$("badm").onclick=()=>{location.href="admin.html"}}}catch(e){}}
+try{const a=await sb.from("admins").select("id").eq("id",UID).maybeSingle();if(a.data){window.IS_ADM=true;$("ap").style.display="block";$("badm").style.display="";$("badm").onclick=()=>{location.href="admin.html"}}}catch(e){}}
 async function cloudSave(force){if(!sb||!UID||!S.nick)return;S.uid=UID;
 const j=JSON.stringify([S.lvl,Math.floor(S.c),S.g,S.sh,S.u,S.inv.length,S.k]);if(!force&&j==lastJ)return;lastJ=j;
 try{await sb.from("players").upsert({id:UID,nick:S.nick,state:S,updated_at:new Date().toISOString()})}catch(e){}}
@@ -290,7 +285,7 @@ $("au_sw").onclick=()=>auMode(authMode=="register"?"login":"register");
 $("au_skip").onclick=()=>{skipped=true;$("au_m").style.display="none"};
 $("au_open").onclick=()=>{auMode("login");$("au_m").style.display="flex"};
 $("au_out").onclick=async()=>{await cloudSave(true);try{await sb.auth.signOut()}catch(e){}
-UID=null;S=fresh();save();render();$("au_out").style.display="none";$("au_open").style.display="";$("badm").style.display="none";auMode("login");$("au_m").style.display="flex"};
+UID=null;S=fresh();save();render();$("au_out").style.display="none";$("au_open").style.display="";$("badm").style.display="none";window.IS_ADM=false;$("ap").style.display="none";auMode("login");$("au_m").style.display="flex"};
 $("au_go").onclick=async()=>{const msg=t=>{$("au_msg").textContent=t};if(!sb)return msg("Нет связи с сервером");
 const email=$("au_e").value.trim(),pw=$("au_p").value,nick=$("au_n").value.trim();
 try{if(authMode=="nick"){if(!NICK.test(nick))return msg(NICKERR);await setNick(nick);return}
