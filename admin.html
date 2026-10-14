@@ -15,7 +15,7 @@ header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px
 <input id="e" placeholder="Email" autocomplete="email"><input id="p" type="password" placeholder="Пароль" autocomplete="current-password">
 <div class="m" id="msg" style="min-height:20px"></div><button id="go">Войти</button></div>
 <div id="app" style="display:none"><header><h1>🛠 Игроки</h1><input id="q" placeholder="🔍 Поиск по нику"><button id="rf" class="g">Обновить</button><button id="out" class="g">Выйти</button></header>
-<div class="m" style="margin-bottom:10px">Измени поля и нажми «Применить». Игрок получит правку, когда игра у него открыта, или при следующем входе.</div><div id="list"></div></div></div>
+<div class="m" style="margin-bottom:10px">Измени поля и нажми «Применить». Игрок получит правку, когда игра у него открыта, или при следующем входе.</div><div id="list"></div><h2 style="margin:22px 0 8px;font-size:17px">🧾 Журнал проверки</h2><div id="log"></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const sb=supabase.createClient("https://sxqemqfulexnciinxdwg.supabase.co","sb_publishable_pekj1WhQKwymHdAPppGtmw_CUPQH49W"),$=id=>document.getElementById(id);
@@ -28,7 +28,9 @@ const r=await sb.from("admins").select("id").eq("id",user.id).maybeSingle();
 if(!r.data){$("msg").textContent="Этот аккаунт не администратор.";await sb.auth.signOut();return}
 $("login").style.display="none";$("app").style.display="block";load()}
 async function load(){const r=await sb.from("players").select("id,nick,state,updated_at").order("updated_at",{ascending:false});
-if(r.error){$("list").innerHTML='<p class="m">Ошибка: '+esc(r.error.message)+'</p>';return}PL=r.data||[];rend()}
+if(r.error){$("list").innerHTML='<p class="m">Ошибка: '+esc(r.error.message)+'</p>';return}PL=r.data||[];rend();loadLog()}
+async function loadLog(){const r=await sb.from("cheat_log").select("nick,reason,details,created_at").order("created_at",{ascending:false}).limit(50);
+$("log").innerHTML=(r.data||[]).map(x=>`<div class="card"><b>${esc(x.nick||"?")}</b> <span class="m">${new Date(x.created_at).toLocaleString("ru")}</span><br>${esc(x.reason)} <span class="m">${esc(JSON.stringify(x.details))}</span></div>`).join("")||'<p class="m">Журнал пуст: подозрительных сохранений не было.</p>'}
 function rend(){const q=$("q").value.trim().toLowerCase();
 $("list").innerHTML=PL.filter(p=>!q||String(p.nick).toLowerCase().includes(q)).map(p=>{const s=p.state||{},g=s.g||[];
 return `<div class="card" data-p="${esc(p.id)}"><b>${esc(p.nick)}</b> <span class="m">ур. ${s.lvl||1} · кристаллов ${fmt(+s.c||0)} · осколков ${+s.sh||0} · обновлено ${new Date(p.updated_at).toLocaleString("ru")}</span>
@@ -39,8 +41,9 @@ $("list").onclick=async e=>{const b=e.target.closest("[data-a]");if(!b)return;co
 c.querySelectorAll("[data-f]").forEach(i=>{if(i.value!==""&&i.value!==i.defaultValue){patch[i.dataset.f]=+i.value;ch=1}});
 const gs=[];c.querySelectorAll("[data-gi]").forEach(i=>{if(i.value!==""&&i.value!==i.defaultValue){gs[+i.dataset.gi]=Math.max(0,Math.floor(+i.value)||0);ch=1}else gs[+i.dataset.gi]=""});
 patch.g=gs.join(",");if(!ch){alert("Ничего не изменено");return}
-const r=await sb.from("admin_edits").upsert({player_id:c.dataset.p,patch,ver:Date.now()});
-alert(r.error?"Ошибка: "+r.error.message:"✅ Отправлено игроку")};
+const r=await sb.rpc("admin_set",{p_id:c.dataset.p,p_patch:patch});
+if(r.error){alert("Ошибка: "+r.error.message);return}
+alert("✅ Применено. Игрок получит изменения в течение ~20 секунд.");load()};
 $("go").onclick=async()=>{$("msg").textContent="";const r=await sb.auth.signInWithPassword({email:$("e").value.trim(),password:$("p").value});
 if(r.error){$("msg").textContent=r.error.message;return}enter()};
 $("rf").onclick=load;$("q").oninput=rend;
