@@ -141,7 +141,7 @@ $("ups").onclick=e=>{const b=e.target.closest("[data-u]");if(!b)return;const c=+
 document.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{q=+b.dataset.q;document.querySelectorAll("[data-q]").forEach(x=>x.classList.toggle("on",x==b));refresh()});
 $("th").onclick=()=>{const d=document.documentElement;const dark=getComputedStyle(d).getPropertyValue("--bg").trim()=="#14121f";d.dataset.theme=dark?"light":"dark"};
 let rsArm=0;$("rs").onclick=()=>{if(!rsArm){rsArm=1;$("rs").textContent="Нажми ещё раз для сброса";setTimeout(()=>{rsArm=0;$("rs").textContent="Сбросить игру"},4000);return}rsArm=0;$("rs").textContent="Сбросить игру";{try{localStorage.removeItem(key)}catch(e){}S={c:0,t:0,lvl:1,g:G.map(_=>0),u:{},k:0,pt:0,last:Date.now(),won:false,sh:0,inv:[],eq:{},nid:1,ev:S.ev,nick:S.nick};buff=0;render();toast("Игра сброшена")}};
-const gd=$("gold");gd.onclick=()=>{gd.style.display="none";sfx("gold");buff=20;add(cps()*30);toast("🌟 Золотой кристалл! ×7 добыча на 20 с + бонус, +"+giveSh(5)+" 💠")};
+const gd=$("gold");gd.onclick=()=>{gd.style.display="none";sfx("gold");buff=30;toast("🌟 Золотой кристалл! ×7 добыча на 30 с, +"+giveSh(5)+" 💠")};
 let lt=Date.now(),sv=0;
 setInterval(()=>{const n=Date.now(),dt=Math.min(1,(n-lt)/1000);lt=n;S.pt+=dt;if(buff>0)buff-=dt;add(cps()*dt*spd);
 goldT-=dt;if(goldT<=0){goldT=(90+Math.random()*90)/(1+ev("amulet"));gd.style.left=10+Math.random()*(innerWidth-80)+"px";gd.style.top=80+Math.random()*(innerHeight-160)+"px";gd.style.display="block";sfx("gspawn");setTimeout(()=>gd.style.display="none",12000)}
@@ -263,11 +263,15 @@ if(typeof e.sh=="number"&&isFinite(e.sh))S.sh=Math.max(0,Math.floor(e.sh));
 if(typeof e.lvl=="number"&&isFinite(e.lvl)){S.lvl=Math.max(1,Math.min(999,Math.floor(e.lvl)));S.t=S.lvl>1?GOALS[S.lvl-2]:0;S.won=false}
 if(e.g)String(e.g).split(",").forEach((v,i)=>{if(v!==""&&i<G.length)S.g[i]=Math.max(0,Math.floor(+v)||0)});
 render();toast("🛠 Владелец изменил твой прогресс");save();cloudSave(true)}
-async function setNick(n){const r=await sb.from("players").insert({id:UID,nick:n,state:S});
+let lastT=0;
+function adopt(d,msg){const nk=S.nick;S=Object.assign(fresh(),d.state);S.nick=nk;S.uid=UID;S.arev=+d.adm_rev||0;fix();render();save();lastJ="";toast(msg)}
+async function setNick(n){const sent=S.t;const r=await sb.from("players").insert({id:UID,nick:n,state:S}).select("state,adm_rev").single();
 if(r.error){auMode("nick");$("au_m").style.display="flex";$("au_msg").textContent=r.error.code=="23505"?"Этот ник занят, выбери другой":r.error.message;return}
-S.nick=n;$("au_m").style.display="none";lastJ="";toast("👤 Добро пожаловать, "+n+"!")}
+$("au_m").style.display="none";lastJ="";lastT=Date.now();S.nick=n;
+if(+r.data.state.t<sent*(1-1e-9)-1)adopt(r.data,"⚠️ Прогресс без входа слишком большой, чтобы его перенести. Начинаем заново.");
+else toast("👤 Добро пожаловать, "+n+"!")}
 async function onLogin(u){UID=u.id;$("au_m").style.display="none";let row=null;
-try{const r=await sb.from("players").select("nick,state").eq("id",UID).maybeSingle();row=r.data}catch(e){}
+try{const r=await sb.from("players").select("nick,state,adm_rev").eq("id",UID).maybeSingle();row=r.data}catch(e){}
 const mine=S.uid===undefined||S.uid===UID,cs=row&&row.state&&Object.keys(row.state).length?row.state:null;
 if(cs){if(!mine||(+cs.t||0)>=S.t)S=Object.assign(fresh(),cs)}else if(!mine)S=fresh();
 S.uid=UID;fix();render();$("au_open").style.display="none";$("au_out").style.display="";
@@ -275,12 +279,14 @@ if(row&&row.nick){S.nick=row.nick;toast("👋 С возвращением, "+Str
 else{const n=u.user_metadata&&u.user_metadata.nick;if(n&&NICK.test(n))await setNick(n);else{auMode("nick");$("au_m").style.display="flex"}}
 lastJ="";save();pollE();
 try{const a=await sb.from("admins").select("id").eq("id",UID).maybeSingle();if(a.data){window.IS_ADM=true;$("ap").style.display="block";$("badm").style.display="";$("badm").onclick=()=>{location.href="admin.html"}}}catch(e){}}
-async function cloudSave(force){if(!sb||!UID||!S.nick)return;S.uid=UID;
-const j=JSON.stringify([S.lvl,Math.floor(S.c),S.g,S.sh,S.u,S.inv.length,S.k]);if(!force&&j==lastJ)return;lastJ=j;
-try{await sb.from("players").upsert({id:UID,nick:S.nick,state:S,updated_at:new Date().toISOString()})}catch(e){}}
+async function cloudSave(force){if(!sb||!UID||!S.nick)return;if(Date.now()-lastT<3000)return;S.uid=UID;
+const j=JSON.stringify([S.lvl,Math.floor(S.c),S.g,S.sh,S.u,S.inv.length,S.k]);if(!force&&j==lastJ)return;lastJ=j;lastT=Date.now();const sent=S.t;
+try{const r=await sb.from("players").update({state:S}).eq("id",UID).select("state,adm_rev").maybeSingle();const d=r.data;if(!d||!d.state)return;
+if(+d.adm_rev>(S.arev||0))adopt(d,"🛠 Владелец изменил твой прогресс");
+else if(+d.state.t<sent*(1-1e-9)-1)adopt(d,"⚠️ Сервер не принял сохранение: прогресс возвращён к последнему проверенному")}catch(e){}}
 async function pollE(){if(!sb||!UID)return;
-try{const r=await sb.from("admin_edits").select("patch,ver").eq("player_id",UID).maybeSingle();const d=r.data;
-if(d&&+d.ver>(S.ev||0))applyE(Object.assign({ver:+d.ver},d.patch))}catch(e){}}
+try{const r=await sb.from("players").select("state,adm_rev").eq("id",UID).maybeSingle();const d=r.data;
+if(d&&d.state&&+d.adm_rev>(S.arev||0))adopt(d,"🛠 Владелец изменил твой прогресс")}catch(e){}}
 $("au_sw").onclick=()=>auMode(authMode=="register"?"login":"register");
 $("au_skip").onclick=()=>{skipped=true;$("au_m").style.display="none"};
 $("au_open").onclick=()=>{auMode("login");$("au_m").style.display="flex"};
