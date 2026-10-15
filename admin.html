@@ -1,53 +1,89 @@
 <!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Админка — Кристальная шахта</title>
 <style>
-:root{--bg:#f4f1ec;--card:#fff;--tx:#1d1b2e;--m:#6b6880;--ac:#6c4cf5;--bd:#e2ddd3}
+:root{--bg:#f4f1ec;--card:#fff;--tx:#1d1b2e;--m:#6b6880;--ac:#6c4cf5;--bd:#e2ddd3;--bad:#c0392b}
 @media(prefers-color-scheme:dark){:root{--bg:#14121f;--card:#1e1b30;--tx:#ecebf5;--m:#9895b0;--ac:#9a82ff;--bd:#2f2b48}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:14px}
-.w{max-width:960px;margin:0 auto}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:10px}
-h1{font-size:20px;margin:0}.m{color:var(--m);font-size:13px}.r{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-label{font-size:12px;color:var(--m);display:block}input{background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:6px 8px;font:inherit;width:140px}input.s{width:78px}
-button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}button.g{background:var(--bd);color:var(--tx)}
-header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}header input{flex:1;min-width:160px;width:auto}
+.w{max-width:980px;margin:0 auto}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:10px}
+h1{font-size:20px;margin:0}h2{font-size:16px;margin:14px 0 8px}.m{color:var(--m);font-size:13px}.r{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:flex-end}
+label{font-size:12px;color:var(--m);display:block}input,select,textarea{background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:6px 8px;font:inherit;width:140px}
+input.s{width:78px}textarea{width:100%;min-height:70px}input.f{width:100%}
+button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}button.g{background:var(--bd);color:var(--tx)}button.d{background:var(--bad)}
+header{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}header nav{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+nav button.on{background:var(--ac)}nav button{background:var(--bd);color:var(--tx)}nav button.on{color:#fff}
 #login{max-width:380px;margin:40px auto}#login input{width:100%;margin:6px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.stat b{font-size:26px;display:block}
+.bars{display:flex;gap:4px;align-items:flex-end;height:80px;margin-top:8px}.bars div{flex:1;background:var(--ac);border-radius:3px 3px 0 0;min-height:4px}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:9px;background:var(--bd);margin-left:4px}.tag.b{background:var(--bad);color:#fff}
 </style></head><body><div class="w">
 <div id="login" class="card"><h1>🛠 Админка</h1><p class="m">Войди аккаунтом администратора.</p>
 <input id="e" placeholder="Email" autocomplete="email"><input id="p" type="password" placeholder="Пароль" autocomplete="current-password">
 <div class="m" id="msg" style="min-height:20px"></div><button id="go">Войти</button></div>
-<div id="app" style="display:none"><header><h1>🛠 Игроки</h1><input id="q" placeholder="🔍 Поиск по нику"><button id="rf" class="g">Обновить</button><button id="out" class="g">Выйти</button></header>
-<div class="m" style="margin-bottom:10px">Измени поля и нажми «Применить». Игрок получит правку, когда игра у него открыта, или при следующем входе.</div><div id="list"></div><h2 style="margin:22px 0 8px;font-size:17px">🧾 Журнал проверки</h2><div id="log"></div></div></div>
+<div id="app" style="display:none">
+<header><h1>🛠 Админка</h1><nav id="tabs"><button data-t="st">📊 Статистика</button><button data-t="pl">👥 Игроки</button><button data-t="an">📢 Объявления</button><button data-t="pm">🎟️ Промокоды и подарки</button><button data-t="lg">🧾 Журнал</button></nav><button class="g" id="out">Выйти</button></header>
+<div id="main"></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const sb=supabase.createClient("https://sxqemqfulexnciinxdwg.supabase.co","sb_publishable_pekj1WhQKwymHdAPppGtmw_CUPQH49W"),$=id=>document.getElementById(id);
 const N=["⛏️ Дрон-бур","🤖 Шахтёр-бот","🚜 Экскаватор","🏭 Фабрика","🛰️ Орбитальный лазер","🌀 Портал в жилу","⭐ Звёздная кузня","🌌 Квантовая шахта","🕳️ Чёрная дыра","👑 Кристальный разум"];
-const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-function fmt(n){if(n<1e3)return Math.floor(n)+"";const e=Math.floor(Math.log10(n));if(e>=18)return(n/10**e).toFixed(2)+"e"+e;const s=["","K","M","B","T","Qa"],i=Math.floor(e/3);return(n/10**(3*i)).toFixed(2)+s[i]}
-let PL=[];
+const RN=["Обычный","Редкий","Эпический","Легендарный"];
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+function fmt(n){n=+n||0;if(n<1e3)return Math.floor(n)+"";const e=Math.floor(Math.log10(n));if(e>=18)return(n/10**e).toFixed(2)+"e"+e;const s=["","K","M","B","T","Qa"],i=Math.floor(e/3);return(n/10**(3*i)).toFixed(2)+s[i]}
+const dt=x=>x?new Date(x).toLocaleString("ru"):"—";
+let T="st",PL=[];
+const LD='<p class="m">Загрузка…</p>';
 async function enter(){const {data:{user}}=await sb.auth.getUser();if(!user)return;
 const r=await sb.from("admins").select("id").eq("id",user.id).maybeSingle();
 if(!r.data){$("msg").textContent="Этот аккаунт не администратор.";await sb.auth.signOut();return}
-$("login").style.display="none";$("app").style.display="block";load()}
-async function load(){const r=await sb.from("players").select("id,nick,state,updated_at").order("updated_at",{ascending:false});
-if(r.error){$("list").innerHTML='<p class="m">Ошибка: '+esc(r.error.message)+'</p>';return}PL=r.data||[];rend();loadLog()}
-async function loadLog(){const r=await sb.from("cheat_log").select("nick,reason,details,created_at").order("created_at",{ascending:false}).limit(50);
-$("log").innerHTML=(r.data||[]).map(x=>`<div class="card"><b>${esc(x.nick||"?")}</b> <span class="m">${new Date(x.created_at).toLocaleString("ru")}</span><br>${esc(x.reason)} <span class="m">${esc(JSON.stringify(x.details))}</span></div>`).join("")||'<p class="m">Журнал пуст: подозрительных сохранений не было.</p>'}
-function rend(){const q=$("q").value.trim().toLowerCase();
-$("list").innerHTML=PL.filter(p=>!q||String(p.nick).toLowerCase().includes(q)).map(p=>{const s=p.state||{},g=s.g||[];
-return `<div class="card" data-p="${esc(p.id)}"><b>${esc(p.nick)}</b> <span class="m">ур. ${s.lvl||1} · кристаллов ${fmt(+s.c||0)} · осколков ${+s.sh||0} · обновлено ${new Date(p.updated_at).toLocaleString("ru")}</span>
+$("login").style.display="none";$("app").style.display="block";go("st")}
+function go(t){T=t;document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t==t));$("main").innerHTML=LD;V[t]()}
+const V={};
+V.st=async()=>{const r=await sb.rpc("admin_stats");if(r.error){$("main").innerHTML='<p class="m">Ошибка: '+esc(r.error.message)+' (выполни server_all.sql)</p>';return}
+const s=r.data,mx=Math.max(1,...s.days.map(d=>d.n));
+$("main").innerHTML=`<div class="grid">${[["Всего игроков",s.total],["Новых за сутки",s.new_24h],["Новых за 7 дней",s.new_7d],["Активных за сутки",s.active_24h],["Активных за 7 дней",s.active_7d],["Заблокировано",s.banned],["Кланов",s.clans]].map(x=>`<div class="card stat"><div class="m">${x[0]}</div><b>${x[1]}</b></div>`).join("")}</div><div class="card"><div class="m">Регистрации за 14 дней</div><div class="bars">${s.days.map(d=>`<div title="${d.d}: ${d.n}" style="height:${4+d.n/mx*72}px"></div>`).join("")}</div></div>`};
+V.pl=async()=>{const r=await sb.rpc("admin_players");if(r.error){$("main").innerHTML='<p class="m">Ошибка: '+esc(r.error.message)+'</p>';return}PL=r.data||[];rend()};
+function rend(){const q=($("q")?$("q").value:"").trim().toLowerCase();
+const list=PL.filter(p=>!q||(p.nick+" "+p.email).toLowerCase().includes(q)).map(p=>{const s=p.state||{},g=s.g||[];
+return `<div class="card" data-p="${esc(p.id)}"><b>${esc(p.nick)}</b>${p.banned?'<span class="tag b">бан</span>':""}${p.hidden?'<span class="tag">скрыт</span>':""}
+<div class="m">${esc(p.email)} · ур. ${s.lvl||1} · кристаллов ${fmt(s.c)} · осколков ${Math.floor(+s.sh||0)} · зарегистрирован ${dt(p.created_at)} · был(а) ${dt(p.updated_at)}</div>
 <div class="r">${[["c","Кристаллы",s.c],["sh","Осколки",s.sh],["lvl","Уровень",s.lvl]].map(x=>`<label>${x[1]}<input type="number" step="any" data-f="${x[0]}" value="${Math.floor(+x[2]||0)}"></label>`).join("")}</div>
 <div class="r">${N.map((n,i)=>`<label title="${n}">${n.split(" ")[0]}<input class="s" type="number" data-gi="${i}" value="${+g[i]||0}"></label>`).join("")}</div>
-<div class="r"><button data-a="1">Применить</button></div></div>`}).join("")||'<p class="m">Игроков пока нет.</p>'}
-$("list").onclick=async e=>{const b=e.target.closest("[data-a]");if(!b)return;const c=b.closest("[data-p]"),patch={};let ch=0;
-c.querySelectorAll("[data-f]").forEach(i=>{if(i.value!==""&&i.value!==i.defaultValue){patch[i.dataset.f]=+i.value;ch=1}});
-const gs=[];c.querySelectorAll("[data-gi]").forEach(i=>{if(i.value!==""&&i.value!==i.defaultValue){gs[+i.dataset.gi]=Math.max(0,Math.floor(+i.value)||0);ch=1}else gs[+i.dataset.gi]=""});
-patch.g=gs.join(",");if(!ch){alert("Ничего не изменено");return}
-const r=await sb.rpc("admin_set",{p_id:c.dataset.p,p_patch:patch});
-if(r.error){alert("Ошибка: "+r.error.message);return}
-alert("✅ Применено. Игрок получит изменения в течение ~20 секунд.");load()};
-$("go").onclick=async()=>{$("msg").textContent="";const r=await sb.auth.signInWithPassword({email:$("e").value.trim(),password:$("p").value});
-if(r.error){$("msg").textContent=r.error.message;return}enter()};
-$("rf").onclick=load;$("q").oninput=rend;
+<div class="r"><button data-a="ap">Применить</button><button class="g" data-a="gift">🎁 Подарок</button><button class="g" data-a="hide">${p.hidden?"Показать в рейтинге":"Скрыть из рейтинга"}</button><button class="${p.banned?"g":"d"}" data-a="ban">${p.banned?"Разблокировать":"Заблокировать"}</button></div></div>`}).join("")||'<p class="m">Игроков нет.</p>';
+$("main").innerHTML=`<input id="q" class="f" placeholder="🔍 Поиск по нику или email" value="${esc(q)}" style="margin-bottom:10px">${list}`;
+$("q").oninput=()=>{rend();$("q").focus();$("q").setSelectionRange(1e3,1e3)}}
+V.an=async()=>{const r=await sb.from("announcements").select("*").order("id",{ascending:false}).limit(20);
+$("main").innerHTML=`<div class="card"><h2 style="margin-top:0">Новое объявление</h2><textarea id="at" maxlength="300" placeholder="Текст, который увидят все игроки"></textarea><div class="r"><button data-a="anp">Опубликовать</button></div></div>`+
+(r.data||[]).map(a=>`<div class="card"><div>${esc(a.text)}</div><div class="m">${dt(a.created_at)} · ${a.active?"показывается":"скрыто"}</div><div class="r"><button class="g" data-a="ant" data-id="${a.id}" data-on="${a.active?1:0}">${a.active?"Скрыть":"Показать"}</button><button class="d" data-a="and" data-id="${a.id}">Удалить</button></div></div>`).join("")};
+V.pm=async()=>{const r=await sb.from("promos").select("*").order("created_at",{ascending:false}).limit(50);
+const R='<option value="">без предмета</option>'+RN.map((n,i)=>`<option value="${i}">${n}</option>`).join("");
+$("main").innerHTML=`<div class="card"><h2 style="margin-top:0">Новый промокод</h2><div class="r"><label>Код<input id="pc" placeholder="SUMMER"></label><label>Осколки<input id="ps" type="number" value="50"></label><label>Предмет<select id="pr">${R}</select></label><label>Макс. активаций<input id="pu" type="number" placeholder="∞"></label><label>Дней действует<input id="pd" type="number" placeholder="∞"></label><button data-a="pnew">Создать</button></div></div>
+<div class="card"><h2 style="margin-top:0">Подарок</h2><div class="m">Придёт игрокам в почту и будет получен автоматически.</div><div class="r"><label>Ник (пусто = всем)<input id="gn"></label><label>Осколки<input id="gs" type="number" value="0"></label><label>Предмет<select id="gr">${R}</select></label><button data-a="gnew">Отправить</button></div></div>`+
+(r.data||[]).map(p=>`<div class="card"><b>${esc(p.code)}</b> <span class="m">${p.shards} 💠${p.item_rarity!=null?" + предмет ("+RN[p.item_rarity]+")":""} · использований ${p.uses}${p.max_uses!=null?"/"+p.max_uses:""} · до ${p.expires?dt(p.expires):"без срока"} · ${p.active?"активен":"выключен"}</span><div class="r"><button class="g" data-a="pt" data-c="${esc(p.code)}" data-on="${p.active?1:0}">${p.active?"Выключить":"Включить"}</button></div></div>`).join("")};
+V.lg=async()=>{const r=await sb.from("cheat_log").select("nick,reason,details,created_at").order("created_at",{ascending:false}).limit(60);
+$("main").innerHTML=(r.data||[]).map(x=>`<div class="card"><b>${esc(x.nick||"?")}</b> <span class="m">${dt(x.created_at)}</span><br>${esc(x.reason)} <span class="m">${esc(JSON.stringify(x.details))}</span></div>`).join("")||'<p class="m">Журнал пуст: подозрительных сохранений не было.</p>'};
+const A={};
+A.ap=async(b,c)=>{const patch={};let ch=0;c.querySelectorAll("[data-f]").forEach(i=>{if(i.value!==""&&i.value!==i.defaultValue){patch[i.dataset.f]=+i.value;ch=1}});
+const gs=[];c.querySelectorAll("[data-gi]").forEach(i=>{if(i.value!==""&&i.value!==i.defaultValue){gs[+i.dataset.gi]=Math.max(0,Math.floor(+i.value)||0);ch=1}else gs[+i.dataset.gi]=""});patch.g=gs.join(",");
+if(!ch){alert("Ничего не изменено");return}
+const r=await sb.rpc("admin_set",{p_id:c.dataset.p,p_patch:patch});if(r.error){alert("Ошибка: "+r.error.message);return}alert("✅ Применено. Игрок получит изменения в течение ~20 секунд.");V.pl()};
+A.ban=async(b,c)=>{const p=PL.find(x=>x.id==c.dataset.p);const r=await sb.rpc("admin_flag",{p_id:p.id,p_banned:!p.banned,p_hidden:null});if(r.error)alert(r.error.message);V.pl()};
+A.hide=async(b,c)=>{const p=PL.find(x=>x.id==c.dataset.p);const r=await sb.rpc("admin_flag",{p_id:p.id,p_banned:null,p_hidden:!p.hidden});if(r.error)alert(r.error.message);V.pl()};
+A.gift=async(b,c)=>{const s=prompt("Сколько осколков подарить? (0 — не дарить)","0");if(s===null)return;const i=prompt("Предмет: 0 обычный, 1 редкий, 2 эпический, 3 легендарный. Пусто — без предмета","");
+const r=await sb.rpc("admin_give",{p_to:c.dataset.p,p_shards:Math.floor(+s)||0,p_rarity:i===""||i===null?null:+i});alert(r.error?r.error.message:"🎁 Отправлено")};
+A.anp=async()=>{const t=$("at").value.trim();if(!t)return;const r=await sb.from("announcements").insert({text:t});if(r.error)alert(r.error.message);V.an()};
+A.ant=async b=>{await sb.from("announcements").update({active:b.dataset.on!="1"}).eq("id",+b.dataset.id);V.an()};
+A.and=async b=>{if(!confirm("Удалить?"))return;await sb.from("announcements").delete().eq("id",+b.dataset.id);V.an()};
+A.pnew=async()=>{const c=$("pc").value.trim().toUpperCase();if(!c)return;const d=+$("pd").value;
+const r=await sb.from("promos").insert({code:c,shards:Math.floor(+$("ps").value)||0,item_rarity:$("pr").value===""?null:+$("pr").value,max_uses:$("pu").value===""?null:+$("pu").value,expires:d>0?new Date(Date.now()+d*864e5).toISOString():null});
+if(r.error)alert(r.error.message);V.pm()};
+A.pt=async b=>{await sb.from("promos").update({active:b.dataset.on!="1"}).eq("code",b.dataset.c);V.pm()};
+A.gnew=async()=>{const n=$("gn").value.trim();let to=null;
+if(n){const r=await sb.rpc("admin_players");const p=(r.data||[]).find(x=>x.nick.toLowerCase()==n.toLowerCase());if(!p){alert("Игрок не найден");return}to=p.id}
+else if(!confirm("Отправить ВСЕМ игрокам?"))return;
+const rr=$("gr").value,r=await sb.rpc("admin_give",{p_to:to,p_shards:Math.floor(+$("gs").value)||0,p_rarity:rr===""?null:+rr});alert(r.error?r.error.message:"🎁 Отправлено игрокам: "+r.data)};
+$("main").addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(b&&A[b.dataset.a])A[b.dataset.a](b,b.closest("[data-p]"))});
+$("tabs").addEventListener("click",e=>{const b=e.target.closest("[data-t]");if(b)go(b.dataset.t)});
+$("go").onclick=async()=>{$("msg").textContent="";const r=await sb.auth.signInWithPassword({email:$("e").value.trim(),password:$("p").value});if(r.error){$("msg").textContent=r.error.message;return}enter()};
 $("out").onclick=async()=>{await sb.auth.signOut();location.reload()};
-setInterval(()=>{const a=document.activeElement;if($("app").style.display!="none"&&(!a||a.tagName!="INPUT"))load()},30000);
 enter();
 </script></body></html>
